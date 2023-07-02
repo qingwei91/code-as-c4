@@ -1,6 +1,9 @@
-use std::ops::{Add, Deref};
 use eframe::epaint::RectShape;
-use egui::{Color32, Event, Id, InputState, Pos2, pos2, Rect, Rounding, ScrollArea, Sense, Shape, Stroke, Style, Ui, Vec2, vec2};
+use egui::{
+    pos2, vec2, Color32, Event, Id, InputState, Pos2, Rect, Rounding, ScrollArea, Sense, Shape,
+    Stroke, Style, Ui, Vec2,
+};
+use std::ops::{Add, Deref};
 
 /*
 Data structured in layers:
@@ -27,17 +30,18 @@ impl RootLayer {
 
         // this is stupid, events will be return after this scope
         let zoom_delta = ui.input(|i| {
-            i.events.clone().into_iter()
-                .find_map(|e| match e {
-                    Event::MouseWheel { delta, .. } => Some(delta.y),
-                    _ => None
-                })
+            i.events.clone().into_iter().find_map(|e| match e {
+                Event::MouseWheel { delta, .. } => Some(delta.y),
+                _ => None,
+            })
         });
 
-        if zoom_delta.is_some() {
+        if let Some(zoom) = zoom_delta {
             ui.ctx().pointer_latest_pos().map(|zoom_p| {
                 let before = self.ui_config.screen_2_world(zoom_p);
-                self.ui_config.pan_zoom(res.drag_delta(), zoom_delta.unwrap_or(0.0));
+
+                self.ui_config.pan_zoom(res.drag_delta(), zoom);
+
                 let after = self.ui_config.screen_2_world(zoom_p);
                 let displacement = after - before;
                 self.ui_config.pan_offset -= displacement;
@@ -50,7 +54,7 @@ impl RootLayer {
             let size = b.size * self.ui_config.zoom_factor;
             let box_a = Rect::from_min_size(self.ui_config.world_2_screen(b.pos), size);
             painter.rect(box_a, Rounding::none(), Color32::RED, Stroke::default());
-        };
+        }
     }
 }
 
@@ -68,7 +72,7 @@ enum Layer {
 impl Layer {
     fn draw(&mut self, ui: &mut Ui) {
         match self {
-            Layer::Root(rootLayer) => {}
+            Layer::Root(root_layer) => {}
             Layer::Child(_) => {}
         }
     }
@@ -82,7 +86,7 @@ struct Abox {
 }
 
 impl Abox {
-    fn into(&self, uiStyle: &UIConfig) -> Shape {
+    fn into(&self, ui_style: &UIConfig) -> Shape {
         todo!()
     }
 }
@@ -97,7 +101,7 @@ impl UIConfig {
         self.pan_offset = self.pan_offset - drag_delta;
 
         let o = self.zoom_factor + zoom_factor_delta;
-        if o > 0.01 && o < 2.0 {
+        if o > 0.1 && o < 10.0 {
             self.zoom_factor = o
         }
     }
@@ -117,14 +121,21 @@ pub struct TemplateApp {
 
 impl Default for TemplateApp {
     fn default() -> Self {
-        let all_boxes = (0..4).map(|i| {
-            Abox { pos: pos2(100.0 * i as f32, 100.0 * i as f32), size: vec2(20.0, 20.0), text: String::from("ooo") }
-        }).collect();
+        let all_boxes = (0..4)
+            .map(|i| Abox {
+                pos: pos2(100.0 * i as f32, 100.0 * i as f32),
+                size: vec2(20.0, 20.0),
+                text: String::from("ooo"),
+            })
+            .collect();
 
         Self {
             root: RootLayer {
                 boxes: all_boxes,
-                ui_config: UIConfig { zoom_factor: 1.0, pan_offset: vec2(0.0, 0.0) },
+                ui_config: UIConfig {
+                    zoom_factor: 1.0,
+                    pan_offset: vec2(0.0, 0.0),
+                },
             },
         }
     }
@@ -152,7 +163,6 @@ impl eframe::App for TemplateApp {
         // eframe::set_value(storage, eframe::APP_KEY, self);
     }
 
-
     /*
     We need
     1. A box widget
@@ -165,13 +175,11 @@ impl eframe::App for TemplateApp {
     */
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         // println!("pre draf {:?}", self.pan_offset);
-        egui::CentralPanel::default()
-            .show(ctx, |ui| {
-                egui::Frame::canvas(ui.style()).show(ui, |ui| {
-                    self.root.draw(ui);
-                })
-            });
-
+        egui::CentralPanel::default().show(ctx, |ui| {
+            egui::Frame::canvas(ui.style()).show(ui, |ui| {
+                self.root.draw(ui);
+            })
+        });
 
         if false {
             egui::Window::new("Window").show(ctx, |ui| {

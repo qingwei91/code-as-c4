@@ -1,0 +1,3 @@
+component_specs --parse--> parsed_tree
+parsed_tree --compile--> ui_spec
+ui_spec --render--> ui
